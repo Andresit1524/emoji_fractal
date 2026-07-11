@@ -1,26 +1,32 @@
+use image::{Rgb, RgbImage};
 use num_complex::Complex;
-use std::fs::File;
-use std::io::{BufWriter, Write};
 
-const SIZE: usize = 340;
+const SIZE: u32 = 1920;
 const RES: f64 = 0.00001;
-const MAX_ITERS: usize = 1500;
+const MAX_ITERS: u32 = 1500;
 const CENTER: Complex<f64> = Complex::new(-0.104894547, 0.927887283);
 
-/// Convierte un número en un emoji de color siguiendo una paleta ordenada
-fn get_color_emoji(iters: usize) -> &'static str {
-    let colors = ["⬛", "🟦", "🟩", "🟨", "🟧", "🟥", "🟫"];
+// Paleta de colores RGB
+const COLORS: [[u8; 3]; 7] = [
+    [15, 15, 15],  // Negro
+    [0, 100, 250], // Azul
+    [50, 200, 50], // Verde
+    [250, 220, 0], // Amarillo
+    [250, 130, 0], // Naranja
+    [250, 50, 50], // Rojo
+    [120, 70, 30], // Marrón
+];
 
+fn get_color_rgb(iters: u32) -> Rgb<u8> {
     if iters == MAX_ITERS {
-        return "⬛";
+        return Rgb(COLORS[0]);
     }
 
-    let index = (iters * colors.len()) / MAX_ITERS;
-    colors[index.min(colors.len() - 1)]
+    let index = (iters as usize * COLORS.len()) / MAX_ITERS as usize;
+    Rgb(COLORS[index.min(COLORS.len() - 1)])
 }
 
-/// Obtiene la velocidad de escape del fractal de Mandelbrot
-fn mandelbrot(c: Complex<f64>) -> usize {
+fn mandelbrot(c: Complex<f64>) -> u32 {
     let mut z = c;
     for i in 0..=MAX_ITERS {
         if z.norm() > 2.0 {
@@ -33,10 +39,9 @@ fn mandelbrot(c: Complex<f64>) -> usize {
     MAX_ITERS
 }
 
-fn main() -> std::io::Result<()> {
-    let file = File::create("result.txt")?;
-    // Usamos BufWriter para acumular la escritura en memoria y no saturar el disco
-    let mut writer = BufWriter::new(file);
+fn main() {
+    // Creamos la imagen directamente en memoria (búfer de píxeles RGB)
+    let mut img = RgbImage::new(SIZE, SIZE);
 
     for i in 0..SIZE {
         for j in 0..SIZE {
@@ -45,15 +50,14 @@ fn main() -> std::io::Result<()> {
 
             let point = Complex::new(x, y) * RES + CENTER;
             let iters = mandelbrot(point);
-            let emoji = get_color_emoji(iters);
+            let pixel_color = get_color_rgb(iters);
 
-            writer.write_all(emoji.as_bytes())?;
-
-            if j == SIZE - 1 {
-                writer.write_all(b"\n")?;
-            }
+            // Modificamos el píxel directamente en el buffer
+            img.put_pixel(j, i, pixel_color);
         }
     }
 
-    Ok(())
+    // Guardamos la imagen en disco
+    img.save("result.png").expect("Error al guardar la imagen");
+    println!("¡Imagen guardada como result.png!");
 }
