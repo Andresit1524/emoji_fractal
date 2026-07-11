@@ -1,3 +1,5 @@
+mod viridis;
+
 use image::{Rgb, RgbImage};
 use num_complex::Complex;
 
@@ -6,30 +8,19 @@ const RES: f64 = 0.00001;
 const MAX_ITERS: u32 = 1500;
 const CENTER: Complex<f64> = Complex::new(-0.104894547, 0.927887283);
 
-// Paleta de colores RGB
-const COLORS: [[u8; 3]; 7] = [
-    [15, 15, 15],  // Negro
-    [0, 100, 250], // Azul
-    [50, 200, 50], // Verde
-    [250, 220, 0], // Amarillo
-    [250, 130, 0], // Naranja
-    [250, 50, 50], // Rojo
-    [120, 70, 30], // Marrón
-];
-
 fn get_color_rgb(iters: u32) -> Rgb<u8> {
     if iters == MAX_ITERS {
-        return Rgb(COLORS[0]);
+        return Rgb(viridis::at(0));
     }
 
-    let index = (iters as usize * COLORS.len()) / MAX_ITERS as usize;
-    Rgb(COLORS[index.min(COLORS.len() - 1)])
+    let index = (iters as usize * viridis::len()) / MAX_ITERS as usize;
+    Rgb(viridis::at(index.min(viridis::len() - 1)))
 }
 
 fn mandelbrot(c: Complex<f64>) -> u32 {
     let mut z = c;
     for i in 0..=MAX_ITERS {
-        if z.norm() > 2.0 {
+        if z.norm_sqr() > 4.0 {
             return i;
         }
 
@@ -50,7 +41,11 @@ fn main() {
 
             let point = Complex::new(x, y) * RES + CENTER;
             let iters = mandelbrot(point);
-            let pixel_color = get_color_rgb(iters);
+            let pixel_color = if iters == MAX_ITERS {
+                Rgb([0, 0, 0])
+            } else {
+                get_color_rgb(iters)
+            };
 
             // Modificamos el píxel directamente en el buffer
             img.put_pixel(j, i, pixel_color);
